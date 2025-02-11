@@ -273,7 +273,7 @@ logic_layer_cuda_backward_x_kernel(
                         - w[idx_y][10] +
                          ((a_>=b_) ? static_cast<scalar_t>(0) : -w[idx_y][11]) +
                           (((static_cast<scalar_t>(1) - a_) >= b_) ? static_cast<scalar_t>(0) : w[idx_y][13]) +
-                          (((a_>= b_) ? -w[idx_y][14]) : static_cast<scalar_t>(0)) +
+                          ((a_>= b_) ? -w[idx_y][14] : static_cast<scalar_t>(0)) +
                     );
                     grad_x_ += dy_dx * grad_y_;
                 }
