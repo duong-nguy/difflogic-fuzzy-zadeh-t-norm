@@ -135,10 +135,10 @@ __global__ void logic_layer_cuda_forward_kernel(
                    w_[9] * my_min(my_max(static_cast<scalar_t>(1) - a_, b_),my_max(a_, static_cast<scalar_t>(1) - b_)) +
                    w_[10] * (static_cast<scalar_t>(1) - b_) +
                    w_[11] * my_max(a_, static_cast<scalar_t>(1) - b_) +
-                   w_[12] * (static_cast<scalar_t>(1) - a_))) +
+                   w_[12] * (static_cast<scalar_t>(1) - a_) +
                    w_[13] * my_max(1 - a_, b_) + 
                    w_[14] * (1 - my_min(a_, b_)) +
-                   w_[15])
+                   w_[15]
             );
     }}
 }
@@ -181,7 +181,7 @@ logic_layer_cuda_backward_w_kernel(
 						grad_w_local[9] += my_min(my_max(static_cast<scalar_t>(1) - a_, b_),my_max(a_, static_cast<scalar_t>(1) - b_)) * grad_y_;
 						grad_w_local[10] += (static_cast<scalar_t>(1) - b_) * grad_y_;
 						grad_w_local[11] += my_max(a_, static_cast<scalar_t>(1) - b_) * grad_y_;
-						grad_w_local[12] += (static_cast<scalar_t>(1) - a_))) * grad_y_;
+						grad_w_local[12] += (static_cast<scalar_t>(1) - a_) * grad_y_;
 						grad_w_local[13] += my_max(1 - a_, b_) * grad_y_;
 					  grad_w_local[14] += (1 - my_min(a_, b_)) * grad_y_;
 					  grad_w_local[15] += grad_y_;
@@ -270,7 +270,7 @@ logic_layer_cuda_backward_x_kernel(
                         ((my_max(static_cast<scalar_t>(1) - a_,b_) >= my_max(a_, static_cast<scalar_t>(1) - b_)) ?
 															 ((a_ >= static_cast<scalar_t>(1 - b_)) ? static_cast<scalar_t>(0) : -w[idx_y][9]) :
 															 ((static_cast<scalar_t>(1) - a_ >= b_) ? static_cast<scalar_t>(0) :  w[idx_y][9])) +
-                        - w[idx_y][10]) +
+                        - w[idx_y][10] +
                          ((a_>=b_) ? static_cast<scalar_t>(0) : -w[idx_y][11]) +
                           (((static_cast<scalar_t>(1) - a_) >= b_) ? static_cast<scalar_t>(0) : w[idx_y][13]) +
                           (((a_>= b_) ? -w[idx_y][14]) : static_cast<scalar_t>(0)) +
