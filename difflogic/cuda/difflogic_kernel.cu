@@ -163,7 +163,7 @@ logic_layer_cuda_backward_w_kernel(
     ) {
         const auto idx_a = a[col];
         const auto idx_b = b[col];
-				scalar_t grad_w_local[15] = {0}
+				scalar_t grad_w_local[15] = {0};
         for (int row = row_; row < grad_y.size(1); row += BACKWARD_W_BATCH_THREADS) {  // batch dim
             const auto a_ = x[idx_a][row];
             const auto b_ = x[idx_b][row];
