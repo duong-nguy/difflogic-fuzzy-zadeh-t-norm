@@ -360,8 +360,7 @@ torch::Tensor logic_layer_cuda_backward_w(
 
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
-		const auto grad_w = grad_w.sum(1);
-
+		grad_w = grad_w.sum(1);
 
     return grad_w;
 }
