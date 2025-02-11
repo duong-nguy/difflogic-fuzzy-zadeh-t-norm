@@ -80,6 +80,15 @@ static inline __device__ float gpuAtomicAdd(float *address, float val) { return 
 static inline __device__ double gpuAtomicAdd(double *address, double val) { return atomicAdd(address, val); }
 
 
+template <typename T>
+__device__ T my_min(T a, T b) {
+    return (a <= b) ? a : b;
+}
+
+template <typename T>
+__device__ T my_max(T a, T b) {
+    return (a >= b) ? a : b;
+}
 
 
 /**********************************************************************************************************************/
@@ -115,21 +124,21 @@ __global__ void logic_layer_cuda_forward_kernel(
             const auto w_ = w[col];
 
             y[col][row] = (
-                 ((w_[1] * (a_ * b_)
-                 + w_[2] * (a_ - a_ * b_))
-                + (w_[3] * a_
-                 + w_[4] * (b_ - a_ * b_)))
-               + ((w_[5] * b_
-                 + w_[6] * (a_ + b_ - static_cast<scalar_t>(2) * a_ * b_))
-                + (w_[7] * (a_ + b_ - a_ * b_)
-                 + w_[8] * (static_cast<scalar_t>(1) - (a_ + b_ - a_ * b_)))))
-              + (((w_[9] * (static_cast<scalar_t>(1) - (a_ + b_ - static_cast<scalar_t>(2) * a_ * b_))
-                 + w_[10] * (static_cast<scalar_t>(1) - b_)) +
-                  (w_[11] * (static_cast<scalar_t>(1) - b_ + a_ * b_)
-                 + w_[12] * (static_cast<scalar_t>(1) - a_))) +
-                  (w_[13] * (static_cast<scalar_t>(1) - a_ + a_ * b_)
-                 + w_[14] * (static_cast<scalar_t>(1) - a_ * b_)
-                 + w_[15])
+                   w_[1] * my_min(a_,b_) +
+                   w_[2] * (static_cast<scalar_t>(1) - my_max(static_cast<scalar_t>(1) - a_, b_)) +
+                   w_[3] * a_ +
+                   w_[4] * (static_cast<scalar_t>(1) - my_max(a_,static_cast<scalar_t>(1) - b_)) +
+                   w_[5] * b_ +
+                   w_[6] * (static_cast<scalar_t>(1) - my_min(my_max(static_cast<scalar_t>(1) - a_, b_),my_max(a_, static_cast<scalar_t>(1) - b_))) +
+                   w_[7] * my_max(a_,b_) +
+                   w_[8] * (static_cast<scalar_t>(1) - my_max(a_,b_)) +
+                   w_[9] * my_min(my_max(static_cast<scalar_t>(1) - a_, b_),my_max(a_, static_cast<scalar_t>(1) - b_)) +
+                   w_[10] * (static_cast<scalar_t>(1) - b_) +
+                   w_[11] * my_max(a_, static_cast<scalar_t>(1) - b_) +
+                   w_[12] * (static_cast<scalar_t>(1) - a_))) +
+                   w_[13] * my_max(1 - a_, b_) + 
+                   w_[14] * (1 - my_min(a_, b_)) +
+                   w_[15])
             );
     }}
 }
@@ -154,28 +163,36 @@ logic_layer_cuda_backward_w_kernel(
     ) {
         const auto idx_a = a[col];
         const auto idx_b = b[col];
-        scalar_t grad_w_local_1 = 0;
-        scalar_t grad_w_local_3 = 0;
-        scalar_t grad_w_local_5 = 0;
-        scalar_t grad_w_local_15 = 0;
+				scalar_t grad_w_local[15] = {0}
         for (int row = row_; row < grad_y.size(1); row += BACKWARD_W_BATCH_THREADS) {  // batch dim
             const auto a_ = x[idx_a][row];
             const auto b_ = x[idx_b][row];
             const auto grad_y_ = grad_y[col][row];
 
             // compute grad_w
-            grad_w_local_1 += (a_ * b_) * grad_y_;
-            grad_w_local_3 += a_ * grad_y_;
-            grad_w_local_5 += b_ * grad_y_;
-            grad_w_local_15 += grad_y_;
+					  grad_w_local[1] += my_min(a_,b_) * grad_y_;
+						grad_w_local[2] += (static_cast<scalar_t>(1) - my_max(static_cast<scalar_t>(1) - a_, b_)) * grad_y_;
+					  grad_w_local[3] += a_ * grad_y_;
+						grad_w_local[4] += (static_cast<scalar_t>(1) - my_max(a_,static_cast<scalar_t>(1) - b_)) * grad_y_;
+						grad_w_local[5] += b_ * grad_y_;
+					  grad_w_local[6] += (static_cast<scalar_t>(1) - my_min(my_max(static_cast<scalar_t>(1) - a_, b_),my_max(a_, static_cast<scalar_t>(1) - b_))) * grad_y_;
+						grad_w_local[7] += my_max(a_,b_) * grad_y_;
+						grad_w_local[8] += (static_cast<scalar_t>(1) - my_max(a_,b_)) * grad_y_;
+						grad_w_local[9] += my_min(my_max(static_cast<scalar_t>(1) - a_, b_),my_max(a_, static_cast<scalar_t>(1) - b_)) * grad_y_;
+						grad_w_local[10] += (static_cast<scalar_t>(1) - b_) * grad_y_;
+						grad_w_local[11] += my_max(a_, static_cast<scalar_t>(1) - b_) * grad_y_;
+						grad_w_local[12] += (static_cast<scalar_t>(1) - a_))) * grad_y_;
+						grad_w_local[13] += my_max(1 - a_, b_) * grad_y_;
+					  grad_w_local[14] += (1 - my_min(a_, b_)) * grad_y_;
+					  grad_w_local[15] += grad_y_;
         }
+				for (int w_i = 1; w_i < 16; w_i +=1){
+					grad_w_[col][row_][w_i] = grad_w_local[w_i];
+				}
 
-        grad_w_[col][row_][0] = grad_w_local_1;
-        grad_w_[col][row_][1] = grad_w_local_3;
-        grad_w_[col][row_][2] = grad_w_local_5;
-        grad_w_[col][row_][3] = grad_w_local_15;
     }
 }
+
 
 
 template <typename scalar_t>
@@ -217,36 +234,46 @@ logic_layer_cuda_backward_x_kernel(
                 // compute grad_x
                 if (idx_is_a) {
                     const auto b_ = x[idx_b][row];
+                    const auto a_ = x[idx_a][row];
                     const auto dy_dx = (
-                        (w[idx_y][1] * b_
-                       + w[idx_y][2] * (static_cast<scalar_t>(1) - b_)
-                       + w[idx_y][3]) +
-                        (w[idx_y][4] * -b_
-                       + w[idx_y][6] * (static_cast<scalar_t>(1) - static_cast<scalar_t>(2) * b_)
-                       + w[idx_y][7] * (static_cast<scalar_t>(1) - b_)))
-                     + ((w[idx_y][8] * (b_ - static_cast<scalar_t>(1))
-                       + w[idx_y][9] * (static_cast<scalar_t>(2) * b_ - static_cast<scalar_t>(1))
-                       + w[idx_y][11] * b_)
-                     + (-w[idx_y][12]
-                       + w[idx_y][13] * (b_ - static_cast<scalar_t>(1))
-                       + w[idx_y][14] * -b_)
+                        ((a_ >= b_) ? static_cast<scalar_t>(0) : w[idx_y][1]) +
+                        (((static_cast<scalar_t>(1) - a_) >= b_) ? w[idx_y][2] : static_cast<scalar_t>(0)) +
+                        w[idx_y][3] +
+                        ((a_ >= (static_cast<scalar_t>(1) - b_)) ? -w[idx_y][4] : static_cast<scalar_t>(0)) +
+                        ((my_max(static_cast<scalar_t>(1) - a_,b_) >= my_max(a_, static_cast<scalar_t>(1) - b_)) ?
+															 ((a_ >= static_cast<scalar_t>(1 - b_)) ? -w[idx_y][6] : static_cast<scalar_t>(0)) :
+															 ((static_cast<scalar_t>(1) - a_ >= b_) ? w[idx_y][6] : static_cast<scalar_t>(0))) +
+                        ((a_ >= b_) ? w[idx_y][7] : static_cast<scalar_t>(0)) +
+                        ((a_ >= b_) ? -w[idx_y][8]:static_cast<scalar_t>(0)) +
+                        ((my_max(static_cast<scalar_t>(1) - a_,b_) >= my_max(a_, static_cast<scalar_t>(1) - b_)) ?
+															 ((a_ >= static_cast<scalar_t>(1 - b_)) ? w[idx_y][9] : static_cast<scalar_t>(0)) :
+															 ((static_cast<scalar_t>(1) - a_ >= b_) ? -w[idx_y][9] : static_cast<scalar_t>(0))) +
+                         ((a_>=b_) ? w[idx_y][11] : static_cast<scalar_t>(0)) +
+                        -w[idx_y][12] +
+                          (((static_cast<scalar_t>(1) - a_) >= b_) ?  -w[idx_y][13] : static_cast<scalar_t>(0)) +
+                          (((a_>= b_) ? static_cast<scalar_t>(0) : -w[idx_y][14])) +
                     );
                     grad_x_ += dy_dx * grad_y_;
                 } else {
                     const auto a_ = x[idx_a][row];
+                    const auto b_ = x[idx_b][row];
                     const auto dy_dx = (
-                         (w[idx_y][1] * a_
-                        + w[idx_y][2] * -a_
-                        + w[idx_y][4] * (static_cast<scalar_t>(1) - a_))
-                       + (w[idx_y][5]
-                        + w[idx_y][6] * (static_cast<scalar_t>(1) - static_cast<scalar_t>(2) * a_)
-                        + w[idx_y][7] * (static_cast<scalar_t>(1) - a_)))
-                      + ((w[idx_y][8] * (a_ - static_cast<scalar_t>(1))
-                        + w[idx_y][9] * (static_cast<scalar_t>(2) * a_ - static_cast<scalar_t>(1))
-                        - w[idx_y][10])
-                       + (w[idx_y][11] * (a_ - static_cast<scalar_t>(1))
-                        + w[idx_y][13] * a_
-                        + w[idx_y][14] * -a_)
+                        ((a_ >= b_) ? w[idx_y][1] : static_cast<scalar_t>(0) ) +
+                        (((static_cast<scalar_t>(1) - a_) >= b_) ? static_cast<scalar_t>(0) : -w[idx_y][2]) +
+                        ((a_ >= (static_cast<scalar_t>(1) - b_)) ? static_cast<scalar_t>(0) : w[idx_y][4]) +
+                        w[idx_y][3] +
+                        ((my_max(static_cast<scalar_t>(1) - a_,b_) >= my_max(a_, static_cast<scalar_t>(1) - b_)) ?
+															 ((a_ >= static_cast<scalar_t>(1 - b_)) ? static_cast<scalar_t>(0) :  w[idx_y][6]) :
+															 ((static_cast<scalar_t>(1) - a_ >= b_) ? static_cast<scalar_t>(0) : -w[idx_y][6])) +
+                        ((a_ >= b_) ? static_cast<scalar_t>(0) : w[idx_y][7]) +
+                        ((a_ >= b_) ? static_cast<scalar_t>(0): - w[idx_y][8]) +
+                        ((my_max(static_cast<scalar_t>(1) - a_,b_) >= my_max(a_, static_cast<scalar_t>(1) - b_)) ?
+															 ((a_ >= static_cast<scalar_t>(1 - b_)) ? static_cast<scalar_t>(0) : -w[idx_y][9]) :
+															 ((static_cast<scalar_t>(1) - a_ >= b_) ? static_cast<scalar_t>(0) :  w[idx_y][9])) +
+                        - w[idx_y][10]) +
+                         ((a_>=b_) ? static_cast<scalar_t>(0) : -w[idx_y][11]) +
+                          (((static_cast<scalar_t>(1) - a_) >= b_) ? static_cast<scalar_t>(0) : w[idx_y][13]) +
+                          (((a_>= b_) ? -w[idx_y][14]) : static_cast<scalar_t>(0)) +
                     );
                     grad_x_ += dy_dx * grad_y_;
                 }
@@ -313,7 +340,7 @@ torch::Tensor logic_layer_cuda_backward_w(
     const auto in_size = x.size(0);
     const auto out_size = grad_y.size(0);
 
-    auto grad_w_4 = torch::empty({out_size, BACKWARD_W_BATCH_THREADS, 4}, torch::dtype(x.dtype()).device(x.device()));
+    auto grad_w = torch::empty({out_size, BACKWARD_W_BATCH_THREADS, 16}, torch::dtype(x.dtype()).device(x.device())); // Here the size of output grad_w we want it 16 because I'm lazy
 
     dim3 threads_per_block(BACKWARD_W_BATCH_THREADS, 1024 / BACKWARD_W_BATCH_THREADS);
 
@@ -328,36 +355,12 @@ torch::Tensor logic_layer_cuda_backward_w(
                                a.packed_accessor64<int64_t, 1, torch::RestrictPtrTraits>(),
                                b.packed_accessor64<int64_t, 1, torch::RestrictPtrTraits>(),
                                grad_y.packed_accessor64<scalar_t, 2, torch::RestrictPtrTraits>(),
-                               grad_w_4.packed_accessor64<scalar_t, 3, torch::RestrictPtrTraits>());
+                               grad_w.packed_accessor64<scalar_t, 3, torch::RestrictPtrTraits>());
                        }));
 
     gpuErrchk(cudaPeekAtLastError());
     gpuErrchk(cudaDeviceSynchronize());
 
-    const auto grad_w_components = grad_w_4.sum(1);
-    const auto grad_w_ab = grad_w_components.index({torch::indexing::Slice(), 0});
-    const auto grad_w_a = grad_w_components.index({torch::indexing::Slice(), 1});
-    const auto grad_w_b = grad_w_components.index({torch::indexing::Slice(), 2});
-    const auto grad_w_ = grad_w_components.index({torch::indexing::Slice(), 3});
-
-    const auto grad_w = torch::stack({
-        torch::zeros({out_size}, torch::dtype(x.dtype()).device(x.device())),
-        grad_w_ab,
-        grad_w_a - grad_w_ab,
-        grad_w_a,
-        grad_w_b - grad_w_ab,
-        grad_w_b,
-        grad_w_a + grad_w_b - grad_w_ab - grad_w_ab,
-        grad_w_a + grad_w_b - grad_w_ab,
-        grad_w_ - grad_w_a - grad_w_b + grad_w_ab,
-        grad_w_ - grad_w_a - grad_w_b + grad_w_ab + grad_w_ab,
-        grad_w_ - grad_w_b,
-        grad_w_ - grad_w_b + grad_w_ab,
-        grad_w_ - grad_w_a,
-        grad_w_ - grad_w_a + grad_w_ab,
-        grad_w_ - grad_w_ab,
-        grad_w_,
-    }, 1);
 
 
     return grad_w;
