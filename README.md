@@ -9,7 +9,7 @@ This formulation results in discretized logic gate networks that achieve high in
 We acknowledge the original authors for their foundational work, which this repository builds upon.
 `difflogic` is a Python 3.6+ and PyTorch 1.9.0+ based library for training and inference with logic gate networks.
 
-Visit the original work at (https://github.com/Felix-Petersen/difflogic/tree/main)
+Visit the original work at https://github.com/Felix-Petersen/difflogic/tree/main
 
 ## 🧪 Experiments
 
