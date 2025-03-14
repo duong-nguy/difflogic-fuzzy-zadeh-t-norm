@@ -263,13 +263,6 @@ void apply_logic_gate_net (bool const *inp, {BITS_TO_DTYPE[32]} *out, size_t len
                 else:
                     assert False, 'Device {} not supported.'.format(self.device)
 
-                if verbose and len(code.split('\n')) <= 200:
-                    print()
-                    print()
-                    print(code)
-                    print()
-                    print()
-
                 c_file.write(code)
                 c_file.flush()
 
@@ -359,13 +352,18 @@ void apply_logic_gate_net (bool const *inp, {BITS_TO_DTYPE[32]} *out, size_t len
         )
         x = x.reshape(-1)
 
+        start = time.perf_counter_ns()
         self.lib_fn(x, out, batch_size_div_bits)
+        end = time.perf_counter_ns()
+        infer_time = end - start
 
         out = torch.tensor(out).view(batch_size_div_bits * self.num_bits, self.num_classes)
+
         if pad_len > 0:
             out = out[:-pad_len]
+
         if verbose:
-            print('out.shape', out.shape)
+            print('out.shape', out.shape, 'Inference time', infer_time / out.shape[0])
 
         return out
 

@@ -2,4 +2,3 @@ tqdm
 scikit-learn
 torch
 torchvision
-difflogic

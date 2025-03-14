@@ -239,6 +239,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_neurons', '-k', type=int)
     parser.add_argument('--num_layers', '-l', type=int)
 
+    parser.add_argument('--infer_time', action='store_true', help='mesure infertime')
     args = parser.parse_args()
 
     ####################################################################################################################
@@ -311,4 +312,23 @@ if __name__ == '__main__':
 
             if args.experiment_id is not None:
                 results.save()
+
+    if args.infer_time:
+        print('\n' + '='*80)
+        print('Mesure Inference time of neural network')
+        print('='*80)
+        import time
+
+        for opt_level in range(10):
+            times, total = 0, 0
+            with torch.no_grad():
+                for (data, labels) in torch.utils.data.DataLoader(test_loader.dataset, batch_size=int(1e6), shuffle=False):
+                    data = data.to("cuda")
+                    start = time.perf_counter_ns()
+                    output = model(data)
+                    end = time.perf_counter_ns()
+                    times = end - start
+                    total += output.shape[0]
+            infer_time = times / total
+            print('Inference Time', infer_time)
 
