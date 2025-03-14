@@ -1,19 +1,12 @@
 # difflogic - A Library for Differentiable Logic Gate Networks
 
-![difflogic_logo](difflogic_logo.png)
+This repository is a fork of the original implementation of "Deep Differentiable Logic Gate Networks", presented at NeurIPS 2022 (ArXiv). We extend this work in our paper "Deep Differentiable Logic Gate Networks Based on Fuzzy Zadeh's T-norm", building upon the differentiable logic gate framework to further enhance its capabilities.
 
-This repository includes the official implementation of our NeurIPS 2022 Paper "Deep Differentiable Logic Gate Networks"
-(Paper @ [ArXiv](https://arxiv.org/abs/2210.08277)).
+Differentiable logic gate networks aim to solve machine learning tasks by learning compositions of logic gates, forming logic gate networks. Traditionally, logic gate networks are non-differentiable and cannot be trained using gradient-based methods. The differentiable relaxation introduced in this approach enables efficient training via gradient descent. Specifically, difflogic integrates real-valued logics with a continuously parameterized relaxation, allowing each neuron to determine the optimal logic gate (out of 16 possibilities).
 
-The goal behind differentiable logic gate networks is to solve machine learning tasks by learning combinations of logic
-gates, i.e., so-called logic gate networks. As logic gate networks are conventionally non-differentiable, they can 
-conventionally not be trained with methods such as gradient descent. Thus, differentiable logic gate networks are a 
-differentiable relaxation of logic gate networks which allows efficiently learning of logic gate networks with gradient
-descent. Specifically, `difflogic` combines real-valued logics and a continuously parameterized relaxation of
-the network. This allows learning which logic gate (out of 16 possible) is optimal for each neuron.
-The resulting discretized logic gate networks achieve fast inference speeds, e.g., beyond a million images
-of MNIST per second on a single CPU core.
+This formulation results in discretized logic gate networks that achieve high inference speeds—processing over a million MNIST images per second on a single CPU core.
 
+We acknowledge the original authors for their foundational work, which this repository builds upon.
 `difflogic` is a Python 3.6+ and PyTorch 1.9.0+ based library for training and inference with logic gate networks.
 The library can be installed with:
 ```shell
@@ -145,46 +138,14 @@ implementations over publishing a plethora of different competing implementation
 In the following, we present a few example experiments which are contained in the `experiments` directory.
 `main.py` executes the experiments for difflogic and `main_baseline.py` contains regular neural network baselines.
 
-### ☄️ Adult / Breast Cancer
 
 ```shell
-python experiments/main.py  -eid 526010           -bs 100 -t 20 --dataset adult         -ni 100_000 -ef 1_000 -k 256 -l 5 --compile_model
-python experiments/main.py  -eid 526020 -lr 0.001 -bs 100 -t 20 --dataset breast_cancer -ni 100_000 -ef 1_000 -k 128 -l 5 --compile_model
+./run.sh
 ```
 
-### 🔢 MNIST
 
-```shell
-python experiments/main.py  -bs 100 -t  10 --dataset mnist20x20 -ni 200_000 -ef 1_000 -k  8_000 -l 6 --compile_model
-python experiments/main.py  -bs 100 -t  30 --dataset mnist      -ni 200_000 -ef 1_000 -k 64_000 -l 6 --compile_model
-# Baselines:
-python experiments/main_baseline.py  -bs 100 --dataset mnist    -ni 200_000 -ef 1_000 -k  128 -l 3
-python experiments/main_baseline.py  -bs 100 --dataset mnist    -ni 200_000 -ef 1_000 -k 2048 -l 7
-```
-
-### 🐶 CIFAR-10
-
-```shell
-python experiments/main.py  -bs 100 -t 100 --dataset cifar-10-3-thresholds  -ni 200_000 -ef 1_000 -k    12_000 -l 4 --compile_model
-python experiments/main.py  -bs 100 -t 100 --dataset cifar-10-3-thresholds  -ni 200_000 -ef 1_000 -k   128_000 -l 4 --compile_model
-python experiments/main.py  -bs 100 -t 100 --dataset cifar-10-31-thresholds -ni 200_000 -ef 1_000 -k   256_000 -l 5
-python experiments/main.py  -bs 100 -t 100 --dataset cifar-10-31-thresholds -ni 200_000 -ef 1_000 -k   512_000 -l 5
-python experiments/main.py  -bs 100 -t 100 --dataset cifar-10-31-thresholds -ni 200_000 -ef 1_000 -k 1_024_000 -l 5
-```
-
-## 📖 Citing
-
-```bibtex
-@inproceedings{petersen2022difflogic,
-  title={{Deep Differentiable Logic Gate Networks}},
-  author={Petersen, Felix and Borgelt, Christian and Kuehne, Hilde and Deussen, Oliver},
-  booktitle={Conference on Neural Information Processing Systems (NeurIPS)},
-  year={2022}
-}
-```
 
 ## 📜 License
 
 `difflogic` is released under the MIT license. See [LICENSE](LICENSE) for additional details about it. 
 
-Patent pending.
